@@ -1,12 +1,14 @@
 import { Component, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterOutlet } from '@angular/router';
-// import { TripListing } from './trip-listing/trip-listing';
+// import { TripListing } from './trip-listing/trip-listing'; (removed due to a warning)
+import { Navbar } from './navbar/navbar';
+
 
 @Component({
   selector: 'app-root',
-  // imports: [CommonModule, RouterOutlet, TripListing],
-  imports: [CommonModule, RouterOutlet,],
+  // imports: [CommonModule, RouterOutlet, TripListing], (changed due to a warning)
+  imports: [CommonModule, RouterOutlet, Navbar],
   templateUrl: './app.html',
   styleUrl: './app.css'
 })
