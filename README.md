@@ -1,6 +1,6 @@
 # CS-465-full-stack-development
 
--# Travlr Getaways – Full Stack Web Application
+## Travlr Getaways – Full Stack Web Application
 This project was developed for a full-stack development course. It involved building a web application using two different approaches that supported both the customers and the administrators.
 
 # Architecture
