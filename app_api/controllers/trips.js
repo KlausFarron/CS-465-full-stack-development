@@ -6,13 +6,32 @@ const Model = mongoose.model('trips');
 // in a search. Function taken from the MDN JavaScript documentation.
 const escapeRegex = (text) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
+// Function to convert a price from the URL into a number
+// Returns null if the price is not a valid positive number (e.g., "abc" or "-5")
+const parsePrice = (value) => {
+    // Rejects prices that are not text or are empty
+    if (typeof value !== 'string' || value.trim() === '') {
+        return null;
+    }
+
+    const price = Number(value);   // Converts text to a number
+
+    // Rejects prices that are not real numbers or are negative
+    if (!Number.isFinite(price) || price < 0) {
+        return null;
+    }
+
+    return price;
+};
+
 // GET: /trips
-// Function to list all trips or only trips matching a keyword
+// Function to list all trips or only trips matching a keyword and/or price range
+// (e.g., /trips?keyword=reef&minPrice=1000&maxPrice=2000)
 const tripsList = async (req, res) => {
     try {
-        // Start with an empty filter
-        // Empty filter returns all trips
-        let filter = {};
+        // List of search conditions
+        // Empty list returns all trips
+        const conditions = [];
         const keyword = req.query.keyword;
 
         // Checks if the user provided a keyword
@@ -23,15 +42,61 @@ const tripsList = async (req, res) => {
                 return res.status(400).json({ message: 'Invalid search.' });
             }
 
-            // Check 2: empty keywords and keywords longer than 50 characters
-            const cleanKeyword = keyword.trim();
-            if (cleanKeyword.length === 0 || cleanKeyword.length > 50) {
-                return res.status(400).json({ message: 'Search must be 1 to 50 characters.' });
+            const cleanKeyword = keyword.trim();   // Removes extra spaces
+
+            // Check 2: Rejects keywords longer than 50 characters
+            if (cleanKeyword.length > 50) {
+                return res.status(400).json({ message: 'Search must not be more than 50 characters.' });
             }
 
-            // Searches trip names and resorts for the keyword (not case sensitive)
-            const pattern = new RegExp(escapeRegex(cleanKeyword), 'i');
-            filter = { $or: [{ name: pattern }, { resort: pattern }] };
+            // Searches only if the keyword is not empty
+            // An empty search returns all trips
+            if (cleanKeyword.length > 0) {
+                const pattern = new RegExp(escapeRegex(cleanKeyword), 'i');
+                conditions.push({ $or: [{ name: pattern }, { resort: pattern }] });
+            }
+        }
+
+        // Prices start as null
+        let minPrice = null;
+        let maxPrice = null;
+
+        // Checks if the user provided a minimum price
+        // Empty price boxes are ignored
+        if (req.query.minPrice !== undefined && req.query.minPrice !== '') {
+            minPrice = parsePrice(req.query.minPrice);
+            if (minPrice === null) {
+                return res.status(400).json({ message: 'Minimum price must be a positive number.' });
+            }
+        }
+
+        // Checks if the user provided a maximum price
+        // Empty price boxes are ignored
+        if (req.query.maxPrice !== undefined && req.query.maxPrice !== '') {
+            maxPrice = parsePrice(req.query.maxPrice);
+            if (maxPrice === null) {
+                return res.status(400).json({ message: 'Maximum price must be a positive number.' });
+            }
+        }
+
+        // Rejects a minimum price that is higher than the maximum price
+        if (minPrice !== null && maxPrice !== null && minPrice > maxPrice) {
+            return res.status(400).json({ message: 'Minimum price cannot be higher than maximum price.' });
+        }
+
+        // Prices are stored as text (e.g., "799.00")
+        // $toDouble converts each price to a number before comparing
+        if (minPrice !== null) {
+            conditions.push({ $expr: { $gte: [{ $toDouble: '$perPerson' }, minPrice] } });
+        }
+        if (maxPrice !== null) {
+            conditions.push({ $expr: { $lte: [{ $toDouble: '$perPerson' }, maxPrice] } });
+        }
+
+        // Combines all conditions so trips must match every one
+        let filter = {};
+        if (conditions.length > 0) {
+            filter = { $and: conditions };
         }
 
         // Gets matching trips from the database
