@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 
 import { Trip } from '../models/trip';
@@ -20,8 +20,23 @@ export class TripData {
   baseUrl = 'http://localhost:3000/api';
   url = 'http://localhost:3000/api/trips';
 
-  getTrips(): Observable<Trip[]> {
-    return this.http.get<Trip[]>(this.url);
+  // Function to get all trips or trips matching a search
+  // Empty search returns every trip
+  getTrips(keyword: string = '', minPrice: string = '', maxPrice: string = ''): Observable<Trip[]> {
+    let params = new HttpParams();   // Search values added to the URL
+
+    // Adds each search value only if the user filled it in
+    if (keyword.trim() !== '') {
+      params = params.set('keyword', keyword.trim());
+    }
+    if (minPrice.trim() !== '') {
+      params = params.set('minPrice', minPrice.trim());
+    }
+    if (maxPrice.trim() !== '') {
+      params = params.set('maxPrice', maxPrice.trim());
+    }
+
+    return this.http.get<Trip[]>(this.url, { params: params });
   }
 
   addTrip(formData: Trip): Observable<Trip> {
