@@ -38,9 +38,11 @@ const tripsController = require("../controllers/trips");
 const authController = require('../controllers/authentication');
 
 // define route for registration endpoint
+// Only a logged-in admin can create new accounts
+// Redudant for enhancement in my opinion but I thought it would be a nice fix
 router
     .route('/register')
-    .post(authController.register);
+    .post(authenticateJWT, authController.register);
 
 // define route for login endpoint
 router
