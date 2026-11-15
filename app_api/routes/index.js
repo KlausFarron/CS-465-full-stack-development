@@ -3,45 +3,34 @@ const router = express.Router();
 
 const jwt = require('jsonwebtoken'); // Enable JSON Web Tokens
 
-// Method to authenticate our JWT
+// Function to check the login token before allowing changes to trips
 function authenticateJWT(req, res, next) {
-    // console.log('In Middleware');
-
     const authHeader = req.headers['authorization'];
-    // console.log('Auth Header: ' + authHeader);
 
-    if (authHeader == null)
-    {
-        console.log('Auth Header Required but NOT PRESENT!');
-        return res.sendStatus(401);
+    // Rejects requests without an Authorization header
+    if (authHeader == null) {
+        return res.status(401).json({ message: 'Authorization required.' });
     }
 
-    let headers = authHeader.split(' ');
-    if (headers.length < 1)
-    {
-        console.log('Not enough tokens in Auth Header: ' + headers.length);
-        return res.sendStatus(501);
+    // Splits the header into its two parts (e.g., "Bearer abc123")
+    const parts = authHeader.split(' ');
+    const token = parts[1];
+
+    // Rejects headers that are not in the "Bearer token" format
+    if (parts[0] !== 'Bearer' || token == null) {
+        return res.status(401).json({ message: 'Authorization required.' });
     }
 
-    const token = authHeader.split(' ')[1];
-    // console.log('Token: ' + token);
-
-    if (token == null)
-    {
-        console.log('Null Bearer Token');
-        return res.sendStatus(401);
-    }
-
-    // console.log(process.env.JWT_SECRET);
-    // console.log(jwt.decode(token));
-    const verified = jwt.verify(token, process.env.JWT_SECRET, (err, verified) => {
-        if (err)
-        {
-            return res.sendStatus(401).json('Token Validation Error!');
+    // Checks if the token is valid and has not expired
+    jwt.verify(token, process.env.JWT_SECRET, (err, verified) => {
+        // Rejects invalid or expired tokens
+        if (err) {
+            return res.status(401).json({ message: 'Invalid or expired token.' });
         }
-        req.auth = verified; // Set the auth parameter to the decoded
+
+        req.auth = verified;   // Saves the logged-in user's information
+        next();                // Continues only when the token is valid
     });
-    next(); // We need to continue or this will hang forever
 }
 
 // Where we import the controllers we will route
